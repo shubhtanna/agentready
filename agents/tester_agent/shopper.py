@@ -286,6 +286,12 @@ async def step_find(b: Browser, report: Report, home: sig.PageSignals | None, ta
         report.steps.append(Step("Find products", False, f"Could not find any products: {why}.", ev))
         return []
     if not matches:
+        on_topic = [p for p in products if p.matches(task)]
+        if task.max_price is not None and on_topic and all(p.price is None for p in on_topic):
+            report.steps.append(Step("Find products", False,
+                                     f"Found {len(on_topic)} products that fit “{task.text}”, but none shows a price in the page's HTML "
+                                     "(prices only appear after JavaScript runs), so an agent can't tell which are within budget.", ev))
+            return []
         what = f"matched “{task.text}”" if task.keywords else "had a readable price"
         report.steps.append(Step("Find products", False, f"Read {len(products)} products, but none {what}.", ev))
         return []

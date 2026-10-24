@@ -29,6 +29,7 @@ DEMO = [
     ("https://masala-mandi.onrender.com", "garam masala under ₹500"),
     ("https://tara-handmade.vercel.app", "a pearl necklace under ₹6,000"),
     ("https://voltkart.onrender.com", "wireless earbuds under ₹10,000"),
+    ("https://kitaab-corner.vercel.app", "a thriller under ₹500"),
 ]
 
 

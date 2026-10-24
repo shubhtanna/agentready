@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 PRICE_RE = re.compile(r"(?:₹|Rs\.?\s?|INR\s?)\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)", re.I)
 RELATED_RE = re.compile(r"you may also like|you might also like|similar products|related products|more from|customers also|frequently bought", re.I)
-PRODUCT_PATH_RE = re.compile(r"/(p|product|products|item|items|dp)/[^/?#]+|[?&](p|id|product|slug)=[^&#]+", re.I)
+PRODUCT_PATH_RE = re.compile(r"/(p|product|products|item|items|dp|book|sku)/[^/?#]+|[?&](p|id|product|slug)=[^&#]+", re.I)
 LISTING_PATH_RE = re.compile(r"/(shop|c|category|categories|collections?|rooms?|store|catalog|search)(/|$|\?)|/(shop|catalog|products)\.html", re.I)
 
 

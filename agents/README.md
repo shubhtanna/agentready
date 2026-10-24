@@ -69,6 +69,8 @@ Fixer dry runs on the same stores (21 Oct 2026; local build of each repo, before
 
 After merging the five Fixer pull requests (22 Oct 2026), the Tester scores **5/5 on every live store** (`results/after-merge-2026-10-22.json`). The checkout links it handed over were then used to place demo orders as a human would: Nest & Grain `NG-MVJ6W8DN`, Masala Mandi `MM2652303`, Tara Handmade `TH342453`, Stride Lab `SL52386880` (VoltKart needs a customer account to place the order).
 
+Sixth demo store, kept **unfixed** for live demos (24 Oct 2026): [Kitaab Corner](https://kitaab-corner.vercel.app), an Astro bookshop. The Tester scores it **1/5**: it finds the thrillers, but prices only appear after JavaScript loads them, so an agent can't tell which are under ₹500. Its bag and checkout are browser-only too.
+
 ## Run it locally
 
 Requires Python 3.10+.
