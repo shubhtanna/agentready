@@ -71,6 +71,8 @@ After merging the five Fixer pull requests (22 Oct 2026), the Tester scores **5/
 
 Sixth demo store, kept **unfixed** for live demos (24 Oct 2026): [Kitaab Corner](https://kitaab-corner.vercel.app), an Astro bookshop. The Tester scores it **1/5**: it finds the thrillers, but prices only appear after JavaScript loads them, so an agent can't tell which are under ₹500. Its bag and checkout are browser-only too.
 
+Seventh demo store, also kept **unfixed** (25 Oct 2026): [Leaf & Loam](https://leaf-and-loam.vercel.app), a Nuxt plant nursery. The Tester scores it **1/5**: listing pages show 8 items and load the rest with a JavaScript "Load more" button, search is JavaScript-only and there's no sitemap, so an agent never finds the snake plants. Its cart is a JavaScript-only API.
+
 ## Run it locally
 
 Requires Python 3.10+.

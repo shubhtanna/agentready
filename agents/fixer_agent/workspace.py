@@ -58,11 +58,22 @@ def detect(ws: Path) -> Stack:
             app_router = (ws / "src" / "app").exists() or (ws / "app").exists()
             return Stack("nextjs", f"Next.js {deps['next'].lstrip('^~')} ({'App Router' if app_router else 'Pages Router'})",
                          install, build, [npm, "run", "start", "--", "-p", "{port}"])
+        if "nuxt" in deps:
+            return Stack("nuxt", f"Nuxt {deps['nuxt'].lstrip('^~')} (Vue, server-rendered)", install, build,
+                         [_exe("node"), ".output/server/index.mjs"])
+        if "astro" in deps:
+            return Stack("astro", f"Astro {deps['astro'].lstrip('^~')} (pages built to static HTML)", install, build,
+                         [npm, "run", "preview", "--", "--port", "{port}", "--host", "127.0.0.1"],
+                         ["Hosted as static files: there is no server code at request time."])
         if "vite" in deps and "preview" in scripts:
             ui = "React" if "react" in deps else "Vue" if "vue" in deps else "Svelte" if "svelte" in deps else "JS"
             return Stack("vite-spa", f"Vite + {ui} single-page app (renders in the browser)", install, build,
                          [npm, "run", "preview", "--", "--port", "{port}", "--strictPort", "--host", "127.0.0.1"],
                          ["Hosted as static files: there is no server code at request time."])
+        if "start" not in scripts and "build" in scripts and "preview" in scripts:
+            # A framework we don't know by name, but with the usual build + preview scripts.
+            return Stack("static-build", "JavaScript app with a build step", install, build,
+                         [npm, "run", "preview", "--", "--port", "{port}", "--host", "127.0.0.1"])
         if "start" in scripts:
             fw = next((f for f in ("express", "fastify", "koa", "hapi") if f in deps or f"@{f}/core" in deps), "Node")
             views = next((v for v in ("ejs", "pug", "handlebars", "nunjucks") if v in deps or f"express-{v}" in deps), None)

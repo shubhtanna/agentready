@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from .workspace import Stack
 
-STATIC_HOSTED = ("vite-spa", "static")
+STATIC_HOSTED = ("vite-spa", "static", "astro", "static-build")
 
 
 @dataclass
@@ -49,8 +49,28 @@ serves it, e.g. app/robots.ts in Next.js; create public/robots.txt if there is n
     )
 
 
-def _readable(stack: Stack) -> Fix:
-    if stack.kind in STATIC_HOSTED:
+LISTINGS = """
+- Listing and category pages must reach every product in plain HTML. If they show the first few items and load the
+  rest with JavaScript ("Load more", infinite scroll), keep that for humans but add server-rendered pagination links
+  (e.g. ?page=2, rendered on the server) or list every item, so each product page is linked from somewhere."""
+
+
+def _readable(stack: Stack, finding: str = "") -> Fix:
+    fix = _readable_fix(stack)
+    if "price" in finding.lower() and "javascript" in finding.lower():
+        fix.why = "Your prices only appear after JavaScript runs, so an agent can't see what anything costs or keep to a budget."
+    elif "load more" in finding.lower():
+        fix.why = "Most of your products are only reachable through a JavaScript “Load more” button, so agents never find them."
+    return fix
+
+
+def _readable_fix(stack: Stack) -> Fix:
+    if stack.kind == "astro":
+        how = """Astro builds every page to HTML at build time, so put the data into the .astro templates.
+- If prices, stock or product lists are filled in by a browser script (fetching a JSON endpoint after load), render
+  the same values in the template from the same data source instead. A browser script may still refresh them.
+- Keep the store's data file as the single source; don't copy values by hand."""
+    elif stack.kind in STATIC_HOSTED:
         how = """This site is hosted as static files (no server code runs per request), so generate real HTML at build time.
 - Write a small build script with no new dependencies under scripts/ (Node `scripts/*.mjs`; a Python script is
   fine for a plain HTML site). For a plain HTML site with no build step, run it with run_script so the
@@ -66,6 +86,11 @@ def _readable(stack: Stack) -> Fix:
 - Make links in that HTML point to the generated product pages. Keep the JavaScript app working as before.
 - Hook the script into the existing build ("build": "<existing> && node scripts/<name>.mjs") so it runs on deploy.
   Hosts like Vercel and Netlify serve real files before applying SPA rewrites, so generated pages win."""
+    elif stack.kind == "nuxt":
+        how = """Render product data on the server.
+- Pages must load their data with useFetch / useAsyncData during server rendering (not only in onMounted or on a
+  button click), so names, prices and links are in the HTML. Keep interactive parts as they are.
+- Respect the project's Nuxt version and directory layout (app/, server/)."""
     elif stack.kind == "nextjs":
         how = """Render product data on the server.
 - Homepage, listing/category, search and product pages must output names, prices and links in the server HTML.
@@ -80,7 +105,7 @@ def _readable(stack: Stack) -> Fix:
         "readable-pages", "Make products readable without JavaScript",
         "AI agents read the HTML your server sends and mostly don't run JavaScript. Your products only appear after scripts run, so agents see an empty shop.",
         ["Reach the site", "Find products", "Compare options"],
-        "Every page an agent needs (homepage, listing pages, each product page) must contain the products as plain HTML.\n" + how,
+        "Every page an agent needs (homepage, listing pages, each product page) must contain the products as plain HTML.\n" + how + LISTINGS,
     )
 
 
@@ -160,7 +185,7 @@ def plan(report: dict, stack: Stack) -> Plan:
         p.notes.append("The site didn't load when I tested it. Fix the outage first, then test again.")
     if (reach in failed and "JavaScript" in detail[reach]) or find in failed or compare in failed \
             or "needs JavaScript" in evidence.get(find, ""):
-        p.add(_readable(stack))
+        p.add(_readable(stack, detail.get(find, "")))
     if find in failed or compare in failed or "llms.txt: not found" in evidence.get(find, "") \
             or "sitemap.xml product URLs: 0" in evidence.get(find, ""):
         p.add(_structured(stack))

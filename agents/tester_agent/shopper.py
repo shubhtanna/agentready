@@ -164,8 +164,14 @@ def _product_from_page(url: str, html: str) -> Product | None:
     return Product(url, name, price, "page text", f"{s.meta_description} {s.product_text}", html)
 
 
+SECTION_ITEM_RE = re.compile(r"^/([a-z0-9-]+)/([^/?#]+)/?$", re.I)
+NOT_PRODUCT_SECTIONS = {"blog", "blogs", "news", "help", "pages", "page", "account", "accounts", "user", "users", "order", "orders",
+                        "policy", "policies", "legal", "about", "info", "faq", "careers", "press", "tag", "tags", "author", "authors"}
+
+
 def _candidate_links(b: Browser, base_url: str, s: sig.PageSignals) -> tuple[list[str], list[str]]:
     products, listings = [], []
+    sections: dict[str, list[str]] = {}
     for href, _text in s.links:
         if href.startswith(("mailto:", "tel:", "javascript:", "#")):
             continue
@@ -177,6 +183,13 @@ def _candidate_links(b: Browser, base_url: str, s: sig.PageSignals) -> tuple[lis
             products.append(url)
         elif sig.LISTING_PATH_RE.search(path):
             listings.append(url)
+        elif m := SECTION_ITEM_RE.match(urlparse(url).path):
+            sections.setdefault(m.group(1).lower(), []).append(url)
+    # Stores name their product pages anything (/plants/…, /wines/…). A page that links to several
+    # /<section>/<item> pages from the same section is a listing of items, as a shopper would read it.
+    for name, urls in sections.items():
+        if name not in NOT_PRODUCT_SECTIONS and len(set(urls)) >= 3:
+            products += urls
     dedupe = lambda xs: list(dict.fromkeys(xs))  # noqa: E731
     return dedupe(products), dedupe(listings)
 
@@ -246,11 +259,16 @@ async def step_find(b: Browser, report: Report, home: sig.PageSignals | None, ta
         for guess in ("/search?q=", "/search?query="):
             listing_urls.append(b.origin + guess + "+".join(task.keywords))
     seen_listings = 0
+    partial_listings = []  # listing pages that show only part of their items without JavaScript
     for page in await b.get_many(list(dict.fromkeys(listing_urls))[:MAX_LISTING_PAGES]):
         if page.ok and "html" in page.content_type:
             seen_listings += 1
-            more, _ = _candidate_links(b, page.url, sig.read(page.text))
+            ps = sig.read(page.text)
+            more, _ = _candidate_links(b, page.url, ps)
             product_urls += more
+            m = MORE_RE.search(ps.text)
+            if m and (not m.group(1) or int(m.group(1)) < int(m.group(2))):
+                partial_listings.append(urlparse(page.url).path)
     product_urls = list(dict.fromkeys(product_urls))
     ev.append(f"Listing pages read: {seen_listings} · product links found: {len(product_urls)}")
 
@@ -293,7 +311,12 @@ async def step_find(b: Browser, report: Report, home: sig.PageSignals | None, ta
                                      "(prices only appear after JavaScript runs), so an agent can't tell which are within budget.", ev))
             return []
         what = f"matched “{task.text}”" if task.keywords else "had a readable price"
-        report.steps.append(Step("Find products", False, f"Read {len(products)} products, but none {what}.", ev))
+        why = ""
+        if partial_listings and not sitemap and not has_llms:
+            why = (f" Listing pages ({', '.join(partial_listings[:3])}) show only part of their items; the rest load only with "
+                   "JavaScript (“Load more”), and there is no sitemap or llms.txt, so an agent never sees them.")
+            ev.append("Listing pages with items hidden behind JavaScript: " + ", ".join(partial_listings[:5]))
+        report.steps.append(Step("Find products", False, f"Read {len(products)} products, but none {what}.{why}", ev))
         return []
     report.steps.append(Step("Find products", True, f"Found {len(matches)} products matching the task.", ev))
     return matches
@@ -325,6 +348,8 @@ async def step_compare(report: Report, matches: list[Product], task: Task) -> Pr
 
 
 CART_WORDS = re.compile(r"cart|bag|basket", re.I)
+# "Showing 8 of 16", or a "Load more" / "Show more" button: the listing has more than the HTML shows.
+MORE_RE = re.compile(r"showing\s+(\d+)\s+(?:of|out of)\s+(\d+)|\b(?:load|show|view)\s+more\b", re.I)
 ADD_WORDS = re.compile(r"add to (cart|bag|basket)|buy now|add$", re.I)
 
 
