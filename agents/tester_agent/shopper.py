@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass, field
 from urllib.parse import quote_plus, urlparse
 
 from . import signals as sig
-from .web import Browser, fresh_get
+from .web import Browser, browser_status, fresh_get
 
 ASI1_API_KEY = os.getenv("ASI1_API_KEY", "")
 MAX_PRODUCT_PAGES = 30
@@ -220,6 +220,12 @@ async def step_reach(b: Browser, report: Report) -> sig.PageSignals | None:
         report.steps.append(Step("Reach the site", False, "robots.txt tells automated agents not to visit this site at all.", b.log[-2:]))
         return None
     if not home.ok:
+        if home.status in (401, 403, 406, 429, 451) and 200 <= await browser_status(b.start_url) < 300:
+            report.steps.append(Step("Reach the site", False,
+                                     f"The site turns automated visitors away (HTTP {home.status}) while a normal browser gets in, "
+                                     "so it blocks AI agents by their user agent (bot protection or a firewall rule).",
+                                     b.log[-2:] + [f"Same page as a regular browser: HTTP 200 · as an AI agent: HTTP {home.status}"]))
+            return None
         report.steps.append(Step("Reach the site", False, f"The site did not load for an agent (HTTP {home.status or 'no response'}).", b.log[-2:]))
         return None
     s = sig.read(home.text)

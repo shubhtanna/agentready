@@ -33,6 +33,7 @@ DEMO = [
     ("https://leaf-and-loam.vercel.app", "a snake plant under ₹800"),
     ("https://patti-and-pot.onrender.com", "a darjeeling tea under ₹700"),
     ("https://taana-baana.onrender.com", "a cotton kurta under ₹1,500"),
+    ("https://kaapi-collective.vercel.app", "medium roast coffee beans under ₹700"),
 ]
 
 

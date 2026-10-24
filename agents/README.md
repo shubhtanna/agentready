@@ -77,6 +77,8 @@ Eighth demo store, also kept **unfixed** (25 Oct 2026): [Patti & Pot](https://pa
 
 Ninth demo store, also kept **unfixed** (25 Oct 2026): [Taana Baana](https://taana-baana.onrender.com), a Flask handloom clothing label. Pages, prices and the add-to-cart form are all plain HTML, but the size picker gets its options from JavaScript, so without it the form only offers "Select size" and the server refuses the order. The Tester scores it **3/5**: it finds and compares kurtas, then can't add one to the bag.
 
+Tenth demo store, also kept **unfixed** (25 Oct 2026): [Kaapi Collective](https://kaapi-collective.vercel.app), a Next.js 16 coffee roaster on Vercel. The store itself is server-rendered with plain-HTML forms, but its "bot protection" (`src/proxy.ts`) answers 403 to any user agent containing words like *bot* or *agent*. The Tester scores it **0/5** and reports that browsers get in (HTTP 200) while AI agents are refused (HTTP 403).
+
 ## Run it locally
 
 Requires Python 3.10+.

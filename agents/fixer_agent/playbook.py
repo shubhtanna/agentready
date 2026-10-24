@@ -55,6 +55,22 @@ LISTINGS = """
   (e.g. ?page=2, rendered on the server) or list every item, so each product page is linked from somewhere."""
 
 
+def _bot_filter(stack: Stack) -> Fix:
+    return Fix(
+        "bot-filter", "Let AI shopping agents through your bot protection",
+        "Your site turns away any visitor that identifies as automated, so AI assistants and shopping agents are refused at the door while browsers get in.",
+        ["Reach the site"],
+        """Find the code or config that rejects requests by User-Agent: Next.js proxy.ts / middleware.ts, Express or
+Flask/Django middleware, a server config (nginx), or host rules (vercel.json, netlify.toml, _middleware files).
+- Stop treating every automated visitor as an attacker: don't block on broad words like "bot" or "agent".
+- Let legitimate AI assistants and shopping agents through, e.g. ChatGPT-User, OAI-SearchBot, Claude-User,
+  PerplexityBot, Perplexity-User and agents that identify as AI shopping agents.
+- Keep real protection where it belongs: keep blocking clearly abusive scraping tools if the store wants that,
+  and keep (or add) rate limits on checkout/order endpoints. Don't remove unrelated security checks.
+- Leave a short comment explaining the rule so the store owner can adjust the allow-list.""",
+    )
+
+
 def _readable(stack: Stack, finding: str = "") -> Fix:
     fix = _readable_fix(stack)
     if "price" in finding.lower() and "javascript" in finding.lower():
@@ -190,10 +206,16 @@ def plan(report: dict, stack: Stack) -> Plan:
     reach, find, compare, cart, checkout = "Reach the site", "Find products", "Compare options", "Add to cart", "Checkout link"
     if (reach in failed and "robots.txt" in detail[reach]) or (find in failed and "robots.txt" in detail[find]):
         p.add(_robots(stack))
-    if reach in failed and "HTTP" in detail[reach]:
+    if reach in failed and "turns automated visitors away" in detail[reach]:
+        p.add(_bot_filter(stack))
+        # Everything after the front door is unknown until agents can get in: check it once they can.
+        p.add(_structured(stack))
+        p.add(_cart(stack, check_first=True))
+        p.add(_checkout_link(stack, check_first=True))
+    elif reach in failed and "HTTP" in detail[reach]:
         p.notes.append("The site didn't load when I tested it. Fix the outage first, then test again.")
     # A robots.txt block hides whether the pages themselves are readable, so don't guess they aren't.
-    robots_blocked_find = find in failed and "robots.txt" in detail[find]
+    robots_blocked_find = (find in failed and "robots.txt" in detail[find]) or detail.get(find, "").startswith("Skipped")
     if (reach in failed and "JavaScript" in detail[reach]) or (find in failed and not robots_blocked_find) \
             or (compare in failed and not detail[compare].startswith("Skipped")) or "needs JavaScript" in evidence.get(find, ""):
         p.add(_readable(stack, detail.get(find, "")))
@@ -214,6 +236,6 @@ def plan(report: dict, stack: Stack) -> Plan:
             p.add(_checkout_link(stack, check_first=detail[checkout].startswith("Skipped")))
     if report.get("blocked_agents"):
         p.add(_robots(stack))
-    order = ["robots", "readable-pages", "structured-data", "html-cart", "checkout-link"]
+    order = ["bot-filter", "robots", "readable-pages", "structured-data", "html-cart", "checkout-link"]
     p.fixes.sort(key=lambda f: order.index(f.id))
     return p

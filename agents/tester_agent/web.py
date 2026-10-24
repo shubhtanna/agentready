@@ -130,6 +130,18 @@ class Browser:
         return await asyncio.gather(*(one(u) for u in urls))
 
 
+BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36"
+
+
+async def browser_status(url: str) -> int:
+    """Diagnosis only: the HTTP status a normal browser gets. Used to tell 'site down' from 'agents refused'."""
+    async with httpx.AsyncClient(headers={"User-Agent": BROWSER_UA}, timeout=TIMEOUT, follow_redirects=True) as c:
+        try:
+            return (await c.get(url)).status_code
+        except httpx.HTTPError:
+            return 0
+
+
 async def fresh_get(url: str) -> Page:
     """Fetch with a brand-new client: no cookies. This is what a human sees when they open a link."""
     async with httpx.AsyncClient(headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT, follow_redirects=True) as c:
