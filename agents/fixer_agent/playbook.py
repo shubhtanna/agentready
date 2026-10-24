@@ -127,7 +127,14 @@ def _structured(stack: Stack) -> Fix:
     )
 
 
-def _cart(stack: Stack, check_first: bool) -> Fix:
+def _cart(stack: Stack, check_first: bool, finding: str = "") -> Fix:
+    fix = _cart_fix(stack, check_first)
+    if "options only appear" in finding:
+        fix.why = "Your size (or colour) picker only gets its options from JavaScript, so an agent has nothing to choose and the add-to-cart form is refused."
+    return fix
+
+
+def _cart_fix(stack: Stack, check_first: bool) -> Fix:
     if stack.kind in STATIC_HOSTED:
         how = """There is no server, so a POST form cannot work. Give each product page a plain link instead:
 <a href="/buy/<slug>/">Add to cart</a> (keep the JS button for humans if you like; the link can sit in the same
@@ -140,7 +147,9 @@ for the product id/slug (and variant), a quantity input, and <button type="submi
 The server route adds the item to the cart and redirects (303) to the cart page, which is server-rendered and
 shows each item's name, quantity and price. If the site uses CSRF tokens, include the token in the form; never
 weaken CSRF protection. Existing JavaScript can keep intercepting the form for humans. In Next.js a <form> whose
-action is a Server Action already works without JavaScript."""
+action is a Server Action already works without JavaScript.
+If the form needs a choice such as size or colour, render every option in the HTML on the server (a <select> with
+real <option>s, or radio buttons), not only through JavaScript; out-of-stock options can be disabled."""
     return Fix(
         "html-cart", "Let agents add to cart without JavaScript",
         "Your add-to-cart button only works through the page's JavaScript, so an agent that reads HTML can't put anything in a cart.",
@@ -195,7 +204,7 @@ def plan(report: dict, stack: Stack) -> Plan:
         if "robots.txt" in detail[cart]:
             p.add(_robots(stack))
         else:
-            p.add(_cart(stack, check_first=detail[cart].startswith("Skipped")))
+            p.add(_cart(stack, check_first=detail[cart].startswith("Skipped"), finding=detail[cart]))
     if checkout in failed:
         if "minimum order" in detail[checkout].lower():
             p.notes.append("Your cart has a minimum order value. That's a business rule, so I won't change it.")

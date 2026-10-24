@@ -416,8 +416,14 @@ async def step_cart(b: Browser, report: Report, chosen: Product | None) -> str |
     else:
         res = await b.get(action)
         ev.append(f"Followed the page's add-to-cart link: {urlparse(action).path or '/'} → HTTP {res.status}")
+    # A choice the form needs (size, colour…) that offers nothing to pick without JavaScript.
+    empty = [n for n, opts in (form.choices.items() if form else []) if opts and not any(opts)]
+    why_empty = (f" The form asks for a {', '.join(empty)}, but its options only appear when JavaScript runs, "
+                 "so an agent has nothing to choose." if empty else "")
+    if empty:
+        ev.append(f"Choices with no options in the HTML: {', '.join(empty)}")
     if not res.ok:
-        report.steps.append(Step("Add to cart", False, f"The add-to-cart form was rejected (HTTP {res.status}).", ev))
+        report.steps.append(Step("Add to cart", False, f"The add-to-cart form was rejected (HTTP {res.status}).{why_empty}", ev))
         return None
 
     how = "the site's own form" if form else "the site's add-to-cart link"
@@ -432,7 +438,7 @@ async def step_cart(b: Browser, report: Report, chosen: Product | None) -> str |
         ev.append(f"Cart page {urlparse(cart.url).path} shows the product")
         report.steps.append(Step("Add to cart", True, f"Added {chosen.name} to the cart using {how}.", ev))
         return cart.url
-    report.steps.append(Step("Add to cart", False, "The form was submitted, but the product never appeared in a cart the agent could read.", ev))
+    report.steps.append(Step("Add to cart", False, "The form was submitted, but the product never appeared in a cart the agent could read." + why_empty, ev))
     return None
 
 

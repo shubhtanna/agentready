@@ -90,8 +90,11 @@ def read(html: str) -> PageSignals:
             if inp.name == "select":
                 opts = [o.get("value", o.get_text(strip=True)) for o in inp.find_all("option")]
                 sel = inp.find("option", selected=True)
+                value = sel.get("value", sel.get_text(strip=True)) if sel else (opts[0] if opts else "")
+                if not value:  # a "Select size" placeholder: pick the first real option, as a shopper would
+                    value = next((o for o in opts if o), "")
                 choices[name] = opts
-                fields.append((name, sel.get("value", sel.get_text(strip=True)) if sel else (opts[0] if opts else "")))
+                fields.append((name, value))
             elif inp.get("type") in ("radio", "checkbox"):
                 choices.setdefault(name, []).append(inp.get("value", "on"))
                 if inp.has_attr("checked"):
