@@ -73,6 +73,8 @@ Sixth demo store, kept **unfixed** for live demos (24 Oct 2026): [Kitaab Corner]
 
 Seventh demo store, also kept **unfixed** (25 Oct 2026): [Leaf & Loam](https://leaf-and-loam.vercel.app), a Nuxt plant nursery. The Tester scores it **1/5**: listing pages show 8 items and load the rest with a JavaScript "Load more" button, search is JavaScript-only and there's no sitemap, so an agent never finds the snake plants. Its cart is a JavaScript-only API.
 
+Eighth demo store, also kept **unfixed** (25 Oct 2026): [Patti & Pot](https://patti-and-pot.onrender.com), a Django tea shop. Everything is server-rendered and add-to-cart is a real form, but `robots.txt` disallows `/tea/` (every product page) and `/cart/` "after competitors scraped our prices". The Tester scores it **1/5**: it finds 14 product links but, honouring robots.txt, can't open any. Its cart also lives only in the visitor's session.
+
 ## Run it locally
 
 Requires Python 3.10+.

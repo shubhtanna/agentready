@@ -37,7 +37,7 @@ class Plan:
 def _robots(stack: Stack) -> Fix:
     return Fix(
         "robots", "Let AI shopping agents in (robots.txt)",
-        "Your robots.txt turns away AI agents or blocks the cart, so well-behaved agents stop before they can buy.",
+        "Your robots.txt turns away AI agents or blocks pages they need (products, cart, checkout), so well-behaved agents stop before they can buy.",
         ["Reach the site", "Add to cart"],
         """Edit the store's robots.txt (a static file such as public/robots.txt or static/robots.txt, or the route that
 serves it, e.g. app/robots.ts in Next.js; create public/robots.txt if there is none).
@@ -179,12 +179,14 @@ def plan(report: dict, stack: Stack) -> Plan:
     failed = {n for n, s in steps.items() if not s["passed"]}
 
     reach, find, compare, cart, checkout = "Reach the site", "Find products", "Compare options", "Add to cart", "Checkout link"
-    if reach in failed and "robots.txt" in detail[reach]:
+    if (reach in failed and "robots.txt" in detail[reach]) or (find in failed and "robots.txt" in detail[find]):
         p.add(_robots(stack))
     if reach in failed and "HTTP" in detail[reach]:
         p.notes.append("The site didn't load when I tested it. Fix the outage first, then test again.")
-    if (reach in failed and "JavaScript" in detail[reach]) or find in failed or compare in failed \
-            or "needs JavaScript" in evidence.get(find, ""):
+    # A robots.txt block hides whether the pages themselves are readable, so don't guess they aren't.
+    robots_blocked_find = find in failed and "robots.txt" in detail[find]
+    if (reach in failed and "JavaScript" in detail[reach]) or (find in failed and not robots_blocked_find) \
+            or (compare in failed and not detail[compare].startswith("Skipped")) or "needs JavaScript" in evidence.get(find, ""):
         p.add(_readable(stack, detail.get(find, "")))
     if find in failed or compare in failed or "llms.txt: not found" in evidence.get(find, "") \
             or "sitemap.xml product URLs: 0" in evidence.get(find, ""):

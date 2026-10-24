@@ -87,7 +87,10 @@ def detect(ws: Path) -> Stack:
         if req.exists():
             install.append([py, "-m", "pip", "install", "-q", "-r", "requirements.txt"])
         if "django" in text or (ws / "manage.py").exists():
-            return Stack("django", "Django", install, None, [py, "manage.py", "runserver", "127.0.0.1:{port}", "--noreload"])
+            # The local database has to exist before the store can serve a page.
+            install.append([py, "manage.py", "migrate", "--noinput"])
+            return Stack("django", "Django (server-rendered templates)", install, None,
+                         [py, "manage.py", "runserver", "127.0.0.1:{port}", "--noreload"])
         if "flask" in text:
             module = next((m for m in ("app", "wsgi", "main", "server") if (ws / f"{m}.py").exists()), "app")
             return Stack("flask", "Flask with Jinja templates", install, None,

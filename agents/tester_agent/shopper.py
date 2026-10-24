@@ -279,6 +279,7 @@ async def step_find(b: Browser, report: Report, home: sig.PageSignals | None, ta
             products.append(Product(node.get("url") or b.start_url, node["name"], sig.parse_price(json.dumps(node.get("offers", ""))), "structured data"))
     pages = await b.get_many(product_urls[:MAX_PRODUCT_PAGES])
     unreadable = 0
+    blocked = [urlparse(p.url).path for p in pages if p.status == 999]  # skipped: robots.txt says no
     for page in pages:
         if not page.ok:
             continue
@@ -289,6 +290,8 @@ async def step_find(b: Browser, report: Report, home: sig.PageSignals | None, ta
             unreadable += 1
     if unreadable:
         ev.append(f"Product pages with no readable product (needs JavaScript): {unreadable}")
+    if blocked:
+        ev.append(f"Product pages robots.txt tells agents not to open: {len(blocked)} (e.g. {blocked[0]})")
     with_ld = sum(p.source == "structured data" for p in products)
     ev.append(f"Products read: {len(products)} ({with_ld} from structured data)")
 
@@ -299,6 +302,11 @@ async def step_find(b: Browser, report: Report, home: sig.PageSignals | None, ta
     if len(named) >= 2:
         matches = named
     matches.sort(key=lambda p: (-p.score(task), p.price or 1e12))
+    if not products and blocked:
+        report.steps.append(Step("Find products", False,
+                                 f"Found {len(product_urls)} product links, but robots.txt tells automated agents not to open product pages "
+                                 f"(e.g. {blocked[0]}), so a well-behaved agent can't read a single product.", ev))
+        return []
     if not products:
         why = "no product links or product data could be read without JavaScript" if product_urls else "no product links, sitemap, structured data or llms.txt were found"
         report.steps.append(Step("Find products", False, f"Could not find any products: {why}.", ev))
